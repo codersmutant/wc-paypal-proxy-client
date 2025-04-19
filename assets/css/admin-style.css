@@ -1,0 +1,187 @@
+/* 
+ * Admin CSS for Payment Tracker 
+ * Add to assets/css/admin-style.css
+ */
+
+.payment-stats-container {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.payment-stats-container h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+    margin-bottom: 15px;
+}
+
+.payment-stats-global {
+    margin-bottom: 25px;
+}
+
+.payment-stats-container p {
+    margin: 5px 0;
+}
+
+.payment-cap-progress {
+    margin: 5px 0;
+    height: 12px;
+    background-color: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 150px;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+.payment-cap-bar {
+    height: 100%;
+    background-color: #4CAF50;
+    border-radius: 3px;
+    transition: width 0.5s ease-in-out;
+}
+
+.payment-cap-bar.warning {
+    background-color: #FFC107;
+}
+
+.payment-cap-bar.danger {
+    background-color: #F44336;
+}
+
+form[action="admin-post.php"] {
+    margin-top: 15px;
+}
+
+/* Style for the reset button */
+.reset-payment-button {
+    margin-top: 10px !important;
+}
+
+/* Proxy table styling */
+.payment-stats-proxies table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.payment-stats-proxies table th {
+    text-align: left;
+}
+
+/* Current proxy indicator */
+tr.current-proxy {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+span.current-badge {
+    background-color: #4CAF50;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+/* Cap status labels */
+.cap-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.cap-available {
+    background-color: #E8F5E9;
+    color: #2E7D32;
+    border: 1px solid #C8E6C9;
+}
+
+.cap-reached {
+    background-color: #FFEBEE;
+    color: #C62828;
+    border: 1px solid #FFCDD2;
+}
+
+/* Row highlighting */
+tr.at-cap {
+    background-color: rgba(244, 67, 54, 0.05);
+}
+
+/* Proxy actions cell styling */
+.proxy-actions {
+    display: flex;
+    gap: 5px;
+}
+
+/* Forms in proxy table */
+.proxy-form {
+    margin: 0 !important;
+    display: inline-block;
+}
+
+/* Make the individual proxy buttons smaller */
+.payment-stats-proxies .button-small {
+    padding: 0 8px;
+    height: 24px;
+    line-height: 22px;
+}
+
+/* Activity history styling */
+.payment-history {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.activity-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    display: inline-block;
+    margin-right: 8px;
+    width: 20px;
+    text-align: center;
+}
+
+.activity-date {
+    color: #777;
+    font-size: 12px;
+}
+
+/* Responsive fixes for narrow screens */
+@media screen and (max-width: 782px) {
+    .proxy-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .payment-stats-proxies .button-small {
+        width: 100%;
+        text-align: center;
+    }
+    
+    /* Stack action buttons on small screens */
+    .proxy-form {
+        width: 100%;
+        margin-bottom: 5px !important;
+    }
+}
