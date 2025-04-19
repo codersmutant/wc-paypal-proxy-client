@@ -46,6 +46,13 @@ class WC_Gateway_PayPal_Proxy extends WC_Payment_Gateway {
 
         // Actions
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, array($this, 'process_admin_options'));
+		add_action('woocommerce_update_options_payment_gateways_' . $this->id, function() {
+			if (class_exists('WC_PayPal_Proxy_Payment_Tracker')) {
+				$tracker = WC_PayPal_Proxy_Payment_Tracker::get_instance();
+				$tracker->update_cap_status();
+			}
+		}, 20); // Priority 20 ensures it runs after process_admin_options
+		
         add_action('woocommerce_receipt_' . $this->id, array($this, 'receipt_page'));
         add_action('wp_enqueue_scripts', array($this, 'payment_scripts'));
     }

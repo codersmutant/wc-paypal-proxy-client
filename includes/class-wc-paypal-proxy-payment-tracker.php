@@ -308,6 +308,39 @@ class WC_PayPal_Proxy_Payment_Tracker {
         return 'proxy_' . md5($url);
     }
 
+
+	public function update_cap_status() {
+    // Get the current payment cap
+    $cap_limit = $this->get_payment_cap();
+    
+    // Reset the global cap reached flag
+    $this->payment_data['cap_reached'] = false;
+    
+    // Check each proxy and update its cap_reached status
+    if ($cap_limit > 0) {
+        foreach ($this->payment_data['proxy_amounts'] as $proxy_id => $data) {
+            // Check if the proxy's amount is still over the cap
+            $is_over_cap = $data['amount'] >= $cap_limit;
+            
+            // Update the cap_reached flag based on current amount vs cap
+            $this->payment_data['proxy_amounts'][$proxy_id]['cap_reached'] = $is_over_cap;
+            
+            // If any proxy is over cap, set the global flag
+            if ($is_over_cap) {
+                $this->payment_data['cap_reached'] = true;
+            }
+        }
+    } else {
+        // If cap is 0 (unlimited), make sure no proxy is marked as capped
+        foreach ($this->payment_data['proxy_amounts'] as $proxy_id => $data) {
+            $this->payment_data['proxy_amounts'][$proxy_id]['cap_reached'] = false;
+        }
+    }
+    
+    // Save the changes
+    $this->save_payment_data();
+}
+	
     /**
      * Save payment data to database
      */
