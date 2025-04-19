@@ -181,13 +181,6 @@ class WC_PayPal_Proxy_Webhook_Handler {
                 // Complete the order
                 $order->payment_complete($transaction_id);
                 $gateway->log('Webhook: Payment completed for order #' . $order_id);
-                
-                // Add the payment to the tracker
-                if (class_exists('WC_PayPal_Proxy_Payment_Tracker')) {
-                    do_action('woocommerce_paypal_proxy_payment_complete', $order->get_total(), $order_id);
-                    $gateway->log('Webhook: Added payment amount to tracker for order #' . $order_id);
-                }
-                
                 break;
                 
             case 'failed':

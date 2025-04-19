@@ -52,11 +52,7 @@ function wc_paypal_proxy_client_init() {
         return;
     }
     
-    // Include files in a specific order to avoid circular dependencies
-    // First include the payment tracker
-    require_once WC_PAYPAL_PROXY_CLIENT_PLUGIN_DIR . 'includes/class-wc-paypal-proxy-payment-tracker.php';
-    
-    // Then include gateway and webhook handler
+    // Include required files
     require_once WC_PAYPAL_PROXY_CLIENT_PLUGIN_DIR . 'includes/class-wc-gateway-paypal-proxy.php';
     require_once WC_PAYPAL_PROXY_CLIENT_PLUGIN_DIR . 'includes/class-wc-paypal-proxy-webhook-handler.php';
     
@@ -66,25 +62,10 @@ function wc_paypal_proxy_client_init() {
     // Initialize webhook handler
     new WC_PayPal_Proxy_Webhook_Handler();
     
-    // Add CSS for admin
-    add_action('admin_enqueue_scripts', 'wc_paypal_proxy_client_admin_styles');
-    
     // Load plugin text domain
     add_action('init', 'wc_paypal_proxy_client_load_textdomain');
 }
 add_action('plugins_loaded', 'wc_paypal_proxy_client_init');
-
-/**
- * Add admin styles
- */
-function wc_paypal_proxy_client_admin_styles() {
-    wp_enqueue_style(
-        'wc-paypal-proxy-admin',
-        WC_PAYPAL_PROXY_CLIENT_PLUGIN_URL . 'assets/css/admin-style.css',
-        array(),
-        WC_PAYPAL_PROXY_CLIENT_VERSION
-    );
-}
 
 /**
  * Add the gateway to WooCommerce
@@ -290,16 +271,9 @@ function wc_paypal_proxy_create_order() {
         $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
         $gateway = $available_gateways['paypal_proxy'];
         
-        // Make sure tracker data is loaded
-        $gateway->maybe_load_tracker_data();
-        
-        // Get current proxy URL and API key
-        $proxy_url = $gateway->proxy_url;
-        $api_key = $gateway->api_key;
-        
         // Generate secure hash and nonce
         $nonce = wp_create_nonce('wc-paypal-proxy-' . $order_id);
-        $hash  = hash_hmac('sha256', $order_id . $nonce, $api_key);
+        $hash  = hash_hmac('sha256', $order_id . $nonce, $gateway->get_option('api_key'));
         
         // Prepare order data
         $order_data = [
@@ -318,7 +292,7 @@ function wc_paypal_proxy_create_order() {
         $encrypted_data  = base64_encode($order_data_json);
         
         // Build iframe URL
-        $iframe_url = rtrim($proxy_url, '/') . '/';
+        $iframe_url = rtrim($gateway->get_option('proxy_url'), '/') . '/';
         $iframe_url .= '?rest_route=/wc-paypal-proxy/v1/checkout&data=' . urlencode($encrypted_data);
         
         // Return success with order details and iframe URL
@@ -335,100 +309,3 @@ function wc_paypal_proxy_create_order() {
 }
 add_action('wp_ajax_wc_paypal_proxy_create_order', 'wc_paypal_proxy_create_order');
 add_action('wp_ajax_nopriv_wc_paypal_proxy_create_order', 'wc_paypal_proxy_create_order');
-
-
-
-
-/**
- * Add direct reset function for debugging (add this to wc-paypal-proxy-client.php)
- */
-function wc_paypal_proxy_debug_reset() {
-    // Only allow admin access
-    if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized access');
-    }
-    
-    // Check if we should run the reset
-    if (isset($_GET['debug_reset_paypal_proxy']) && $_GET['debug_reset_paypal_proxy'] === 'yes') {
-        // Create nonce
-        $nonce = wp_create_nonce('reset_paypal_proxy_payments');
-        
-        // Prepare form data
-        $data = [
-            'action' => 'reset_paypal_proxy_payments',
-            '_wpnonce' => $nonce
-        ];
-        
-        // Log attempt
-        error_log('PayPal Proxy: Debug reset triggered');
-        
-        // Get tracker and reset manually
-        if (class_exists('WC_PayPal_Proxy_Payment_Tracker')) {
-            $tracker = WC_PayPal_Proxy_Payment_Tracker::get_instance();
-            if (method_exists($tracker, 'reset_payments')) {
-                // Set POST data to simulate form submission
-                $_POST['_wpnonce'] = $nonce;
-                
-                // Call reset directly
-                try {
-                    $tracker->reset_payments();
-                } catch (Exception $e) {
-                    error_log('PayPal Proxy Debug: Reset failed with error - ' . $e->getMessage());
-                    wp_die('Reset failed: ' . $e->getMessage());
-                }
-            } else {
-                wp_die('Reset method not found');
-            }
-        } else {
-            wp_die('Tracker class not found');
-        }
-    }
-}
-add_action('admin_init', 'wc_paypal_proxy_debug_reset');
-
-
-
-function wc_paypal_proxy_test_selection() {
-    // Only allow admin access
-    if (!current_user_can('manage_options')) {
-        wp_die('Unauthorized access');
-    }
-    
-    // Check if we should run the test
-    if (isset($_GET['test_proxy_selection']) && $_GET['test_proxy_selection'] === 'yes') {
-        // Get the requested proxy index
-        $proxy_index = isset($_GET['proxy_index']) ? intval($_GET['proxy_index']) : 0;
-        
-        // Log attempt
-        error_log('PayPal Proxy: Test selection triggered for index ' . $proxy_index);
-        
-        // Get tracker and manually update
-        if (class_exists('WC_PayPal_Proxy_Payment_Tracker')) {
-            $tracker = WC_PayPal_Proxy_Payment_Tracker::get_instance();
-            
-            // Verify we have the proxy URLs
-            $proxy_urls = $tracker->get_proxy_urls();
-            if ($proxy_index < 0 || $proxy_index >= count($proxy_urls)) {
-                wp_die('Invalid proxy index');
-            }
-            
-            // Create nonce
-            $nonce = wp_create_nonce('select_proxy_site');
-            
-            // Set up direct call parameters
-            $_POST['_wpnonce'] = $nonce;
-            $_POST['proxy_index'] = $proxy_index;
-            
-            // Call function directly for testing
-            try {
-                $tracker->select_proxy_site();
-            } catch (Exception $e) {
-                error_log('PayPal Proxy Test: Selection failed with error - ' . $e->getMessage());
-                wp_die('Selection failed: ' . $e->getMessage());
-            }
-        } else {
-            wp_die('Tracker class not found');
-        }
-    }
-}
-add_action('admin_init', 'wc_paypal_proxy_test_selection');
