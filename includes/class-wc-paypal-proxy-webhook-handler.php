@@ -147,6 +147,55 @@ class WC_PayPal_Proxy_Webhook_Handler {
         // Get the order
         $order = wc_get_order($order_id);
         
+        
+// Check if the order has billing details
+if (!$order->get_billing_first_name() && !empty($data['customer_data'])) {
+    // Restore billing and shipping data from session if available
+    $session_data = WC()->session->get('checkout_data_' . $order_id);
+    
+    if (!empty($session_data)) {
+        // Update billing details
+        if (!empty($session_data['billing_first_name'])) $order->set_billing_first_name($session_data['billing_first_name']);
+        if (!empty($session_data['billing_last_name'])) $order->set_billing_last_name($session_data['billing_last_name']);
+        if (!empty($session_data['billing_company'])) $order->set_billing_company($session_data['billing_company']);
+        if (!empty($session_data['billing_address_1'])) $order->set_billing_address_1($session_data['billing_address_1']);
+        if (!empty($session_data['billing_address_2'])) $order->set_billing_address_2($session_data['billing_address_2']);
+        if (!empty($session_data['billing_city'])) $order->set_billing_city($session_data['billing_city']);
+        if (!empty($session_data['billing_state'])) $order->set_billing_state($session_data['billing_state']);
+        if (!empty($session_data['billing_postcode'])) $order->set_billing_postcode($session_data['billing_postcode']);
+        if (!empty($session_data['billing_country'])) $order->set_billing_country($session_data['billing_country']);
+        if (!empty($session_data['billing_email'])) $order->set_billing_email($session_data['billing_email']);
+        if (!empty($session_data['billing_phone'])) $order->set_billing_phone($session_data['billing_phone']);
+        
+        // Update shipping details if different
+        if (isset($session_data['ship_to_different_address']) && $session_data['ship_to_different_address']) {
+            if (!empty($session_data['shipping_first_name'])) $order->set_shipping_first_name($session_data['shipping_first_name']);
+            if (!empty($session_data['shipping_last_name'])) $order->set_shipping_last_name($session_data['shipping_last_name']);
+            if (!empty($session_data['shipping_company'])) $order->set_shipping_company($session_data['shipping_company']);
+            if (!empty($session_data['shipping_address_1'])) $order->set_shipping_address_1($session_data['shipping_address_1']);
+            if (!empty($session_data['shipping_address_2'])) $order->set_shipping_address_2($session_data['shipping_address_2']);
+            if (!empty($session_data['shipping_city'])) $order->set_shipping_city($session_data['shipping_city']);
+            if (!empty($session_data['shipping_state'])) $order->set_shipping_state($session_data['shipping_state']);
+            if (!empty($session_data['shipping_postcode'])) $order->set_shipping_postcode($session_data['shipping_postcode']);
+            if (!empty($session_data['shipping_country'])) $order->set_shipping_country($session_data['shipping_country']);
+        } else {
+            // Copy billing to shipping
+            $order->set_shipping_first_name($order->get_billing_first_name());
+            $order->set_shipping_last_name($order->get_billing_last_name());
+            $order->set_shipping_company($order->get_billing_company());
+            $order->set_shipping_address_1($order->get_billing_address_1());
+            $order->set_shipping_address_2($order->get_billing_address_2());
+            $order->set_shipping_city($order->get_billing_city());
+            $order->set_shipping_state($order->get_billing_state());
+            $order->set_shipping_postcode($order->get_billing_postcode());
+            $order->set_shipping_country($order->get_billing_country());
+        }
+        
+        $gateway->log('Restored customer data for order #' . $order_id);
+    }
+}
+        
+        
         if (!$order) {
             $gateway->log('Webhook Error: Order #' . $order_id . ' not found');
             return new WP_Error('invalid_order', 'Order not found');

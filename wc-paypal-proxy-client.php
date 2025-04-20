@@ -271,6 +271,55 @@ try {
     }
     
     $order = wc_get_order($order_id);
+    // Save checkout data to session for later use
+    // Get the form data that was just submitted when the user clicked PayPal
+if (isset($_POST['form_data'])) {
+    parse_str($_POST['form_data'], $checkout_data);
+    
+    // Apply the CURRENT checkout form data to the order
+    if (!empty($checkout_data)) {
+        // Billing data
+        if (isset($checkout_data['billing_first_name'])) $order->set_billing_first_name(sanitize_text_field($checkout_data['billing_first_name']));
+        if (isset($checkout_data['billing_last_name'])) $order->set_billing_last_name(sanitize_text_field($checkout_data['billing_last_name']));
+        if (isset($checkout_data['billing_company'])) $order->set_billing_company(sanitize_text_field($checkout_data['billing_company']));
+        if (isset($checkout_data['billing_address_1'])) $order->set_billing_address_1(sanitize_text_field($checkout_data['billing_address_1']));
+        if (isset($checkout_data['billing_address_2'])) $order->set_billing_address_2(sanitize_text_field($checkout_data['billing_address_2']));
+        if (isset($checkout_data['billing_city'])) $order->set_billing_city(sanitize_text_field($checkout_data['billing_city']));
+        if (isset($checkout_data['billing_state'])) $order->set_billing_state(sanitize_text_field($checkout_data['billing_state']));
+        if (isset($checkout_data['billing_postcode'])) $order->set_billing_postcode(sanitize_text_field($checkout_data['billing_postcode']));
+        if (isset($checkout_data['billing_country'])) $order->set_billing_country(sanitize_text_field($checkout_data['billing_country']));
+        if (isset($checkout_data['billing_email'])) $order->set_billing_email(sanitize_text_field($checkout_data['billing_email']));
+        if (isset($checkout_data['billing_phone'])) $order->set_billing_phone(sanitize_text_field($checkout_data['billing_phone']));
+        
+        // Shipping data
+        if (!isset($checkout_data['ship_to_different_address'])) {
+            // Use billing as shipping
+            $order->set_shipping_first_name($order->get_billing_first_name());
+            $order->set_shipping_last_name($order->get_billing_last_name());
+            $order->set_shipping_company($order->get_billing_company());
+            $order->set_shipping_address_1($order->get_billing_address_1());
+            $order->set_shipping_address_2($order->get_billing_address_2());
+            $order->set_shipping_city($order->get_billing_city());
+            $order->set_shipping_state($order->get_billing_state());
+            $order->set_shipping_postcode($order->get_billing_postcode());
+            $order->set_shipping_country($order->get_billing_country());
+        } else {
+            // Use specified shipping
+            if (isset($checkout_data['shipping_first_name'])) $order->set_shipping_first_name(sanitize_text_field($checkout_data['shipping_first_name']));
+            if (isset($checkout_data['shipping_last_name'])) $order->set_shipping_last_name(sanitize_text_field($checkout_data['shipping_last_name']));
+            if (isset($checkout_data['shipping_company'])) $order->set_shipping_company(sanitize_text_field($checkout_data['shipping_company']));
+            if (isset($checkout_data['shipping_address_1'])) $order->set_shipping_address_1(sanitize_text_field($checkout_data['shipping_address_1']));
+            if (isset($checkout_data['shipping_address_2'])) $order->set_shipping_address_2(sanitize_text_field($checkout_data['shipping_address_2']));
+            if (isset($checkout_data['shipping_city'])) $order->set_shipping_city(sanitize_text_field($checkout_data['shipping_city']));
+            if (isset($checkout_data['shipping_state'])) $order->set_shipping_state(sanitize_text_field($checkout_data['shipping_state']));
+            if (isset($checkout_data['shipping_postcode'])) $order->set_shipping_postcode(sanitize_text_field($checkout_data['shipping_postcode']));
+            if (isset($checkout_data['shipping_country'])) $order->set_shipping_country(sanitize_text_field($checkout_data['shipping_country']));
+        }
+        
+        // Save order data
+        $order->save();
+    }
+}
     $order->update_status('pending', __('Awaiting PayPal payment', 'wc-paypal-proxy-client'));
     
     // Get gateway instance
