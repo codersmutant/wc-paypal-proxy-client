@@ -131,6 +131,12 @@ class WC_Gateway_PayPal_Proxy extends WC_Payment_Gateway {
 public function receipt_page($order_id) {
     $order = wc_get_order($order_id);
     
+    // Get the product mapping class
+$product_mapping = new WC_PayPal_Proxy_Product_Mapping();
+
+// Get mapped order items
+$order_items = $product_mapping->get_order_items_with_mapping($order);
+    
     // Generate secure hash and nonce
     $nonce = wp_create_nonce('wc-paypal-proxy-' . $order_id);
     $hash  = hash_hmac('sha256', $order_id . $nonce, $this->api_key);
@@ -145,7 +151,11 @@ public function receipt_page($order_id) {
         'nonce'       => $nonce,
         'hash'        => $hash,
         'store_name'  => get_bloginfo('name'),
+        'products'    => $order_items,
     );
+    
+    // Log the product data being sent
+$this->log('Sending order #' . $order_id . ' with ' . count($order_items) . ' mapped products to proxy');
     
     // Encode order data
     $order_data_json = json_encode($order_data);

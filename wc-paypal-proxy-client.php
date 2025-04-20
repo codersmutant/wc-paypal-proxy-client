@@ -52,6 +52,12 @@ function wc_paypal_proxy_client_init() {
         return;
     }
     
+    // Include product mapping class
+        require_once WC_PAYPAL_PROXY_CLIENT_PLUGIN_DIR . 'includes/class-wc-paypal-proxy-product-mapping.php';
+        
+        // Initialize product mapping
+        new WC_PayPal_Proxy_Product_Mapping();
+    
     // Include required files
     require_once WC_PAYPAL_PROXY_CLIENT_PLUGIN_DIR . 'includes/class-wc-gateway-paypal-proxy.php';
     require_once WC_PAYPAL_PROXY_CLIENT_PLUGIN_DIR . 'includes/class-wc-paypal-proxy-webhook-handler.php';
@@ -248,49 +254,57 @@ function wc_paypal_proxy_create_order() {
     }
 
     // Create a pending order
-    try {
-        // Get cart contents and calculate totals
-        WC()->cart->calculate_totals();
-        
-        // Set the payment method to our gateway
-        WC()->session->set('chosen_payment_method', 'paypal_proxy');
-        
-        // Create a new order
-        $order_id = WC()->checkout()->create_order([
-            'payment_method' => 'paypal_proxy'
-        ]);
-        
-        if (is_wp_error($order_id)) {
-            throw new Exception($order_id->get_error_message());
-        }
-        
-        $order = wc_get_order($order_id);
-        $order->update_status('pending', __('Awaiting PayPal payment', 'wc-paypal-proxy-client'));
-        
-        // Get gateway instance
-        $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
-        $gateway = $available_gateways['paypal_proxy'];
-        
-        // Generate secure hash and nonce
-        $nonce = wp_create_nonce('wc-paypal-proxy-' . $order_id);
-        $hash  = hash_hmac('sha256', $order_id . $nonce, $gateway->get_option('api_key'));
-        
-        // Prepare order data
-        $order_data = [
-            'order_id'    => $order_id,
-            'currency'    => $order->get_currency(),
-            'amount'      => $order->get_total(),
-            'return_url'  => $gateway->get_return_url($order),
-            'cancel_url'  => $order->get_cancel_order_url(),
-            'nonce'       => $nonce,
-            'hash'        => $hash,
-            'store_name'  => get_bloginfo('name'),
-        ];
-        
-        // Encode order data
-        $order_data_json = json_encode($order_data);
-        $encrypted_data  = base64_encode($order_data_json);
-        
+try {
+    // Get cart contents and calculate totals
+    WC()->cart->calculate_totals();
+    
+    // Set the payment method to our gateway
+    WC()->session->set('chosen_payment_method', 'paypal_proxy');
+    
+    // Create a new order
+    $order_id = WC()->checkout()->create_order([
+        'payment_method' => 'paypal_proxy'
+    ]);
+    
+    if (is_wp_error($order_id)) {
+        throw new Exception($order_id->get_error_message());
+    }
+    
+    $order = wc_get_order($order_id);
+    $order->update_status('pending', __('Awaiting PayPal payment', 'wc-paypal-proxy-client'));
+    
+    // Get gateway instance
+    $available_gateways = WC()->payment_gateways->get_available_payment_gateways();
+    $gateway = $available_gateways['paypal_proxy'];
+    
+    // Generate secure hash and nonce
+    $nonce = wp_create_nonce('wc-paypal-proxy-' . $order_id);
+    $hash  = hash_hmac('sha256', $order_id . $nonce, $gateway->get_option('api_key'));
+    
+    // Get product mapping class
+    $product_mapping = new WC_PayPal_Proxy_Product_Mapping();
+    
+    // Get mapped order items
+    $order_items = $product_mapping->get_order_items_with_mapping($order);
+    
+    // Prepare order data
+    $order_data = [
+        'order_id'    => $order_id,
+        'currency'    => $order->get_currency(),
+        'amount'      => $order->get_total(),
+        'return_url'  => $gateway->get_return_url($order),
+        'cancel_url'  => $order->get_cancel_order_url(),
+        'nonce'       => $nonce,
+        'hash'        => $hash,
+        'store_name'  => get_bloginfo('name'),
+        'products'    => $order_items, // Add the mapped products
+    ];
+    
+    // Encode order data
+    $order_data_json = json_encode($order_data);
+    $encrypted_data  = base64_encode($order_data_json);
+    
+
         // Build iframe URL
         $iframe_url = rtrim($gateway->get_option('proxy_url'), '/') . '/';
         $iframe_url .= '?rest_route=/wc-paypal-proxy/v1/checkout&data=' . urlencode($encrypted_data);
